@@ -45,4 +45,4 @@ jobs:
           git config user.email "actions@github.com"
           git add .
           git commit -m "Update image tag to ${{ github.run_number }}"
-          git push https://${{ secrets.GIT_TOKEN }}@github.com/sagarbindudash/devops-gitops.git
+          git push https://${{ secrets.GIT_TOKEN }}@github.com/sagarbindu/End-2-end-gitops.git

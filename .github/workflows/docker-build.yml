@@ -40,9 +40,9 @@ jobs:
       #  Commit and push
       - name: Push changes
         run: |
-          cd devops-gitops
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          cd End-2-end-gitops
+          git config user.name "sagarbindu"
+          git config user.email "dashsagarbindu789@gmail.com"
           git add .
           git commit -m "Update image tag to ${{ github.run_number }}"
           git push https://${{ secrets.GIT_TOKEN }}@github.com/sagarbindu/End-2-end-gitops.git

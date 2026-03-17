@@ -29,7 +29,7 @@ jobs:
       #  Clone GitOps repo
       - name: Clone GitOps Repo
         run: |
-          git clone https://github.com/sagarbindudash/devops-gitops.git
+          git clone https://github.com/sagarbindu/End-2-end-gitops.git
 
       #  Update Helm values.yaml
       - name: Update Image Tag

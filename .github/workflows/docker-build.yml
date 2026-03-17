@@ -34,7 +34,6 @@ jobs:
       #  Update Helm values.yaml
       - name: Update Image Tag
         run: |
-          cd devops-gitops
           sed -i 's/tag:.*/tag: "${{ github.run_number }}"/' values.yaml
 
       #  Commit and push

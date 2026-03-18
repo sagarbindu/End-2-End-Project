@@ -43,7 +43,7 @@ pipeline {
                     git clone https://github.com/sagarbindu/End-2-end-gitops.git
                     cd End-2-end-gitops
 
-                    sed -i 's/tag:.*/tag: "${TAG}"/' $FILE
+                    sed -i 's/tag:.*/tag: "${TAG}"/' values-dev.yaml
 
                     git config user.name "sagarbindu"
                     git config user.email "dashsagarbindu789@gmail.com"

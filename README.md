@@ -351,6 +351,9 @@ minikube start
 * Add Prometheus + Grafana monitoring
   <img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/73b6c2af-0e0b-4252-abac-e27752a405ae" />
 
+  <img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/b9ea32a5-9629-4a38-aaaf-6d656f58e235" />
+
+
 * Implement Ingress (custom domain)
 * Add HPA (autoscaling)
 * Automate Helm updates via CI pipeline

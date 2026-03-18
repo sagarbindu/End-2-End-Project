@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'docker:24.0.5'
+            image 'docker:24.0.5-git'
             args '-v /var/run/docker.sock:/var/run/docker.sock -e HOME=/tmp'
         }
     }
@@ -40,7 +40,7 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'git-token', variable: 'GIT_TOKEN')]) {
                     sh """
-                    apk add --no-cache git
+        
                     git clone https://github.com/sagarbindu/End-2-end-gitops.git
                     cd End-2-end-gitops
 

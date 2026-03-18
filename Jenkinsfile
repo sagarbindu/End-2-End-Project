@@ -43,12 +43,6 @@ pipeline {
                     git clone https://github.com/sagarbindu/End-2-end-gitops.git
                     cd End-2-end-gitops
 
-                    if [[ "$GIT_BRANCH" == *"dev"* ]]; then
-                        FILE="values-dev.yaml"
-                    else
-                        FILE="values-prod.yaml"
-                    fi
-
                     sed -i 's/tag:.*/tag: "${TAG}"/' $FILE
 
                     git config user.name "sagarbindu"

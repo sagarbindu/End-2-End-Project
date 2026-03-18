@@ -40,6 +40,7 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'git-token', variable: 'GIT_TOKEN')]) {
                     sh """
+                    apk add --no-cache git
                     git clone https://github.com/sagarbindu/End-2-end-gitops.git
                     cd End-2-end-gitops
 

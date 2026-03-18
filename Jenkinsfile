@@ -43,7 +43,7 @@ pipeline {
                     git clone https://github.com/sagarbindu/End-2-end-gitops.git
                     cd End-2-end-gitops
 
-                    if [ "${BRANCH_NAME}" == "dev" ]; then
+                    if [[ "$GIT_BRANCH" == *"dev"* ]]; then
                         FILE="values-dev.yaml"
                     else
                         FILE="values-prod.yaml"

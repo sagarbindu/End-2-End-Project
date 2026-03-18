@@ -1,362 +1,237 @@
-# 🚀 End-to-End DevOps GitOps Project (Docker + Kubernetes + Helm + ArgoCD)
+End-to-End DevOps Project (CI/CD + GitOps + Monitoring)
+Overview
 
-## 📌 Overview
+This project demonstrates a complete DevOps workflow:
 
-This project demonstrates a **complete real-world DevOps workflow** using:
+Application built using Node.js
 
-* Docker (containerization)
-* Kubernetes (Minikube)
-* Helm (package management)
-* ArgoCD (GitOps deployment)
-* GitHub Actions (CI automation)
+Docker image build and push using GitHub Actions
 
-👉 The goal is to implement a **fully automated CI/CD + GitOps pipeline** where:
+GitOps-based deployment using ArgoCD
 
-* Code changes trigger image builds
-* Image updates are stored in Git
-* ArgoCD automatically deploys to Kubernetes
+Kubernetes deployment using Helm
 
----
+Monitoring using Prometheus and Grafana
 
-## 🧱 Architecture
+Architecture
 
-```
-Developer → GitHub → CI Pipeline → Docker Hub → GitOps Repo → ArgoCD → Kubernetes
-```
+Application → Docker → GitHub Actions → Docker Hub → GitOps Repo → ArgoCD → Kubernetes → Prometheus → Grafana
 
----
+Tech Stack
 
-## 🛠️ Technologies Used
+Node.js (Application)
 
-* Docker
-* Kubernetes (Minikube)
-* Helm
-* ArgoCD
-* GitHub Actions
-* Node.js (sample app)
+Docker (Containerization)
 
----
+GitHub Actions (CI/CD)
 
-## 📦 Step 1: Application Setup
+Docker Hub (Image Registry)
 
-Created a simple Node.js app:
+Kubernetes (Minikube)
 
-```js
-const express = require('express');
-const app = express();
+Helm (Packaging)
 
-app.get('/', (req, res) => {
-  res.send('DevOps Project Running 🚀');
-});
+ArgoCD (GitOps Deployment)
 
-app.listen(3000);
-```
+Prometheus (Metrics Collection)
 
----
+Grafana (Visualization)
 
-## 🐳 Step 2: Dockerization
+Application Setup
 
-Dockerfile:
+Clone the repository
 
-```Dockerfile
-FROM node:18
-WORKDIR /app
-COPY . .
-RUN npm install
-EXPOSE 3000
-CMD ["node", "index.js"]
-```
+Install dependencies
+npm install
 
-Build & run:
+Run locally
+node app.js
 
-```bash
-docker build -t devops-app:v1 .
-docker run -p 3000:3000 devops-app:v1
-```
+Application runs on port 3000
 
----
+Docker Setup
 
-## ☁️ Step 3: Push to Docker Hub
+Build image
+docker build -t <docker-username>/devops-app:tag .
 
-```bash
-docker tag devops-app:v1 sagarbindudash/devops-app:v1
-docker push sagarbindudash/devops-app:v1
-```
+Run container
+docker run -p 3000:3000 <docker-username>/devops-app:tag
 
----
+CI/CD Pipeline (GitHub Actions)
 
-## 🔄 Step 4: CI Automation (GitHub Actions)
+Pipeline stages:
 
-Workflow:
+Build Docker image
 
-```yaml
-name: Build and Push Docker Image
+Push image to Docker Hub
 
-on:
-  push:
-    branches:
-      - main
+Update image tag in GitOps repo
 
-jobs:
-  docker:
-    runs-on: ubuntu-latest
+ArgoCD automatically deploys
 
-    steps:
-      - uses: actions/checkout@v3
+Branch-based behavior:
 
-      - uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+dev branch updates values-dev.yaml
 
-      - uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: sagarbindudash/devops-app:${{ github.run_number }}
-```
+main branch updates values-prod.yaml
 
----
+GitOps Repository
 
-## ☸️ Step 5: Kubernetes Setup (Minikube)
+Separate repo used for deployment configuration.
 
-```bash
-minikube start
-kubectl get nodes
-```
+Contains:
 
----
+Helm chart
 
-## 📦 Step 6: Helm Deployment
+values-dev.yaml
 
-```bash
-helm create devops-chart
-```
+values-prod.yaml
 
-### values.yaml
+GitHub Actions updates image tag here.
 
-```yaml
-image:
-  repository: sagarbindudash/devops-app
-  tag: "1"
-  pullPolicy: Always
-```
+ArgoCD watches this repo and syncs automatically.
 
-### Key Fixes:
+Kubernetes Deployment
 
-* containerPort → 3000
-* targetPort → 3000
+Helm is used to deploy application.
 
-Deploy:
+Key components:
 
-```bash
-helm install devops-app .
-```
+Deployment
 
-Access:
+Service
 
-```bash
-kubectl port-forward svc/devops-app-devops-chart 8080:3000
-```
+ServiceMonitor (for Prometheus)
 
----
+ArgoCD Setup
 
-## 🚀 Step 7: ArgoCD Setup
+Install ArgoCD:
 
-```bash
 kubectl create namespace argocd
-
-kubectl apply -n argocd -f \
-https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-```
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
 Access UI:
 
-```bash
 kubectl port-forward svc/argocd-server -n argocd 8081:443
-```
 
-Login:
+Open:
 
-* Username: admin
-* Password: (generated/reset manually)
+https://localhost:8081
 
----
+Login using admin credentials.
 
-## 📂 Step 8: GitOps Repository
+Monitoring Setup
 
-👉 GitOps Repo:
-https://github.com/sagarbindudash/devops-gitops
+Install Prometheus and Grafana:
 
-Push Helm chart:
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 
-```bash
-git init
-git add .
-git commit -m "helm chart"
-git remote add origin https://github.com/sagarbindudash/devops-gitops.git
-git push -u origin main
-```
+helm repo update
+helm install monitoring prometheus-community/kube-prometheus-stack
 
----
+Access Grafana
 
-## 🔗 Step 9: ArgoCD Application
+kubectl port-forward svc/monitoring-grafana 3000:80
 
-Configured in ArgoCD UI:
+Open:
 
-* Repo: devops-gitops
-* Path: `.`
-* Cluster: default
-* Namespace: default
+http://localhost:3000
 
-Enabled:
+Application Metrics
 
-* Auto Sync ✅
-* Self Heal ✅
-* Prune ✅
+Prometheus metrics added using prom-client.
 
----
+Endpoint:
 
-## 🔥 Step 10: GitOps in Action
+/metrics
 
-Update `values.yaml`:
+Example metric:
 
-```yaml
-tag: "2"
-```
+http_requests_total
 
-Push changes:
+ServiceMonitor
 
-```bash
-git commit -am "update image"
-git push
-```
+Used to expose application metrics to Prometheus.
 
-👉 ArgoCD automatically:
+Ensures Prometheus scrapes /metrics endpoint.
 
-* Detects change
-* Syncs application
-* Deploys new version
+Grafana Dashboard
 
----
+Custom dashboard created with:
 
-# 🐞 Troubleshooting (Real Issues Faced)
+Total requests
 
----
+Requests per second
 
-## ❌ 1. ErrImagePull
+Memory usage
 
-**Issue:**
+CPU usage
 
-```
-pull access denied
-```
+Example queries:
 
-**Fix:**
+http_requests_total
+rate(http_requests_total[1m])
+increase(http_requests_total[1m])
 
-* Incorrect image tag
-* Updated `values.yaml` with correct tag
+Troubleshooting
 
----
+ImagePullBackOff
+Check image name and Docker Hub access
+Ensure image is public or use imagePullSecrets
 
-## ❌ 2. Port Forward Error
+Port-forward not working
+Check correct port mapping
+Ensure service port matches container port
 
-**Issue:**
+Prometheus not showing metrics
+Check ServiceMonitor labels match service labels
+Verify /metrics endpoint is working
 
-```
-connection refused
-```
+Grafana showing no data
+Check time range
+Use correct PromQL query
+Generate traffic to application
 
-**Fix:**
+Git push failed
+Increase git buffer
+git config --global http.postBuffer 524288000
 
-* App runs on port 3000
-* Updated:
+Minikube not starting
+Start Docker Desktop
+Then run minikube start
 
-```yaml
-containerPort: 3000
-targetPort: 3000
-```
+What was implemented
 
----
+CI/CD pipeline using GitHub Actions
 
-## ❌ 3. Helm YAML Error
+GitOps deployment using ArgoCD
 
-**Issue:**
+Helm-based Kubernetes deployment
 
-```
-cannot unmarshal string
-```
+Branch-based environment handling (dev and prod)
 
-**Fix:**
+Application monitoring using Prometheus
 
-* Correct YAML indentation
+Visualization using Grafana
 
----
+Custom metrics integration
 
-## ❌ 4. ArgoCD Login Failed
+Future Enhancements
 
-**Issue:**
+Add alerts using Alertmanager
 
-* Password not working
+Integrate Slack or email notifications
 
-**Fix:**
+Add response time metrics
 
-* Reset via `argocd-secret`
+Add ingress for external access
 
----
-
-## ❌ 5. Repo Not Accessible
-
-**Issue:**
-
-```
-repository not found
-```
-
-**Fix:**
-
-* Made repo public OR
-* Added GitHub token
-
----
-
-## ❌ 6. Minikube Cluster Errors
-
-**Issue:**
-
-* API server not reachable
-
-**Fix:**
-
-```bash
-minikube delete
-minikube start
-```
-
----
-
-# 🧠 Key Learnings
-
-* GitOps = Git is the single source of truth
-* ArgoCD continuously syncs desired state
-* No manual deployments required
-* YAML indentation is critical
-* Port mismatches are common issues
-
----
-
-
-# 🚀 Future Enhancements
-
-* Add Prometheus + Grafana monitoring
+Deploy on managed Kubernetes (AKS/EKS/GKE)
   <img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/73b6c2af-0e0b-4252-abac-e27752a405ae" />
 
   <img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/b9ea32a5-9629-4a38-aaaf-6d656f58e235" />
 
 
-* Implement Ingress (custom domain)
-* Add HPA (autoscaling)
-* Automate Helm updates via CI pipeline
 
 ---
 

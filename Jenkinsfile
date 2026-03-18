@@ -51,8 +51,8 @@ pipeline {
 
                     sed -i 's/tag:.*/tag: "${TAG}"/' $FILE
 
-                    git config user.name "jenkins"
-                    git config user.email "jenkins@example.com"
+                    git config user.name "sagarbindu"
+                    git config user.email "dashsagarbindu789@gmail.com"
                     git commit -am "Update image tag ${TAG}"
                     git push https://${GIT_TOKEN}@github.com/sagarbindu/End-2-end-gitops.git
                     """

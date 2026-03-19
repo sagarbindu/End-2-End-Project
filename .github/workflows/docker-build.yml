@@ -1,23 +1,49 @@
 name: End-2-End-Project
 
 on:
-  pull_request:
+  push:
     branches:
       - main
       - dev
 
 jobs:
 
-  #  Build job
+  # 🔍 SonarQube Scan (Code Quality)
+  sonar-scan:
+    name: SonarQube Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=devops-app
+            -Dsonar.organization=your-org
+            -Dsonar.sources=.
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+      - name: SonarQube Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # 🏗 Build job
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
+    needs: sonar-scan
 
     steps:
       - name: Checkout App Repo
         uses: actions/checkout@v3
 
-  #  Push Docker Image
+  # 📦 Push Docker Image
   push:
     name: Push to Docker Hub
     runs-on: ubuntu-latest
@@ -33,14 +59,25 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: sagar456/devops-app:${{ github.run_number }}
+      - name: Build Docker Image (Local)
+        run: |
+          docker build -t sagar456/devops-app:${{ github.run_number }} .
 
-  #  DEV Deployment (Auto)
+      # 🔐 Trivy Scan BEFORE push (best practice)
+      - name: Scan Docker Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: sagar456/devops-app:${{ github.run_number }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Push Docker Image
+        run: |
+          docker push sagar456/devops-app:${{ github.run_number }}
+
+  # 🚀 DEV Deployment (Auto)
   update-dev:
     name: Update Dev Helm
     runs-on: ubuntu-latest
@@ -66,7 +103,7 @@ jobs:
           git commit -m "Dev: update image tag to ${{ github.run_number }}"
           git push https://${{ secrets.GIT_TOKEN }}@github.com/sagarbindu/End-2-end-gitops.git
 
-  #  PROD Deployment (With Approval)
+  # 🔒 PROD Deployment (Manual Approval)
   update-prod:
     name: Update Prod Helm
     runs-on: ubuntu-latest

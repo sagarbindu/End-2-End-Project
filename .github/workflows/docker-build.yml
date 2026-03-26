@@ -27,15 +27,8 @@ jobs:
             -Dsonar.organization=sagarbindu
             -Dsonar.sources=.
             -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.qualitygate.wait=true
       
-      - name: SonarQube Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-      - name: Debug report
-        run: cat .scannerwork/report-task.txt
 
   # 🏗 Build job
   build:

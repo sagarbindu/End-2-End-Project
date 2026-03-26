@@ -34,6 +34,8 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+      - name: Debug report
+        run: cat .scannerwork/report-task.txt
 
   # 🏗 Build job
   build:

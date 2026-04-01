@@ -349,6 +349,54 @@ minikube start
 # 🚀 Future Enhancements
 
 * Add Prometheus + Grafana monitoring
+Install Prometheus and Grafana:
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+helm repo update helm install monitoring prometheus-community/kube-prometheus-stack
+
+Access Grafana
+
+kubectl port-forward svc/monitoring-grafana 3000:80
+
+Open:
+
+http://localhost:3000
+
+Application Metrics
+
+Prometheus metrics added using prom-client.
+
+Endpoint:
+
+/metrics
+
+Example metric:
+
+http_requests_total
+
+ServiceMonitor
+
+Used to expose application metrics to Prometheus.
+
+Ensures Prometheus scrapes /metrics endpoint.
+
+Grafana Dashboard
+
+Custom dashboard created with:
+
+Total requests
+
+Requests per second
+
+Memory usage
+
+CPU usage
+
+Example queries:
+
+http_requests_total rate(http_requests_total[1m]) increase(http_requests_total[1m])
+
 * Implement Ingress (custom domain)
 * Add HPA (autoscaling)
 * Automate Helm updates via CI pipeline

@@ -9,7 +9,7 @@ on:
     inputs:
       image_tag:
         description: "Enter image tag to deploy (SHA)"
-        required: true
+        required: false
 
 jobs:
 

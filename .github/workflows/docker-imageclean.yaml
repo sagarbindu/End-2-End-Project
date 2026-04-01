@@ -1,0 +1,44 @@
+name: Cleanup Docker Images
+
+on:
+  schedule:
+    - cron: "10 9 * * *"    
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Delete images older than 5 days
+        run: |
+          echo "Fetching image tags..."
+
+          NOW=$(date +%s)
+          DAYS=5
+          LIMIT=$((DAYS * 24 * 60 * 60))
+
+          curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+          "https://hub.docker.com/v2/repositories/sagar456/devops-app/tags?page_size=100" \
+          | jq -c '.results[]' | while read tag; do
+
+            NAME=$(echo $tag | jq -r '.name')
+            LAST_UPDATED=$(echo $tag | jq -r '.last_updated')
+
+            # Convert to epoch
+            TAG_TIME=$(date -d "$LAST_UPDATED" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$LAST_UPDATED" +%s)
+
+            AGE=$((NOW - TAG_TIME))
+
+            if [ $AGE -gt $LIMIT ]; then
+              echo "Deleting old tag: $NAME"
+
+              curl -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+              "https://hub.docker.com/v2/repositories/sagar456/devops-app/tags/$NAME/"
+            else
+              echo "Keeping tag: $NAME"
+            fi
+          done

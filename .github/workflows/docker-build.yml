@@ -39,6 +39,7 @@ jobs:
       # 🏗 Build Image with Better Tagging
       - name: Build Docker Image
         run: |
+          ls -la
           docker build -t sagar456/devops-app:${{ github.sha }} .
           docker tag sagar456/devops-app:${{ github.sha }} sagar456/devops-app:latest
 

@@ -5,46 +5,57 @@ on:
     branches:
       - main
       - dev
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Enter image tag to deploy (SHA)"
+        required: true
 
 jobs:
 
-  #  Build job
-  build:
-    name: Build Docker Image
+  # 🏗 Build + Push Docker Image
+  build-and-push:
+    name: Build and Push Image
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout App Repo
-        uses: actions/checkout@v3
-
-  #  Push Docker Image
-  push:
-    name: Push to Docker Hub
-    runs-on: ubuntu-latest
-    needs: build
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # 🔐 Docker Login
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: sagar456/devops-app:${{ github.run_number }}
+      # 🏗 Build Image with Better Tagging
+      - name: Build Docker Image
+        run: |
+          docker build -t sagar456/devops-app:${{ github.sha }} .
+          docker tag sagar456/devops-app:${{ github.sha }} sagar456/devops-app:latest
 
-  #  DEV Deployment (Auto)
+      # 🔍 Trivy Scan (Security)
+      # - name: Scan Docker Image with Trivy
+      #   uses: aquasecurity/trivy-action@master
+      #   with:
+      #     image-ref: sagar456/devops-app:${{ github.sha }}
+      #     format: table
+      #     exit-code: '1'
+      #     ignore-unfixed: true
+      #     severity: CRITICAL,HIGH
+
+      # 📦 Push Image
+      - name: Push Docker Image
+        run: |
+          docker push sagar456/devops-app:${{ github.sha }}
+          docker push sagar456/devops-app:latest
+
+  # 🚀 DEV Deployment (Auto)
   update-dev:
     name: Update Dev Helm
     runs-on: ubuntu-latest
-    needs: push
+    needs: build-and-push
     if: github.ref_name == 'dev'
 
     steps:
@@ -54,8 +65,8 @@ jobs:
       - name: Update Dev Values
         run: |
           cd End-2-end-gitops
-          echo "Updating values-dev.yaml with tag ${{ github.run_number }}"
-          sed -i "s/tag:.*/tag: \"${{ github.run_number }}\"/" values-dev.yaml
+          echo "Updating values-dev.yaml with tag ${{ github.sha }}"
+          sed -i "s/tag:.*/tag: \"${{ github.sha }}\"/" values-dev.yaml
 
       - name: Push changes
         run: |
@@ -63,17 +74,17 @@ jobs:
           git config user.name "sagarbindu"
           git config user.email "dashsagarbindu789@gmail.com"
           git add .
-          git commit -m "Dev: update image tag to ${{ github.run_number }}"
+          git commit -m "Dev: update image tag to ${{ github.sha }}" || echo "No changes to commit"
           git push https://${{ secrets.GIT_TOKEN }}@github.com/sagarbindu/End-2-end-gitops.git
 
-  #  PROD Deployment (With Approval)
+  # 🔒 PROD Deployment (Manual Approval)
   update-prod:
     name: Update Prod Helm
     runs-on: ubuntu-latest
-    needs: push
-    if: github.ref_name == 'main'
+    needs: build-and-push
+    if: github.ref_name == 'main' && github.event_name == 'workflow_dispatch'
 
-    environment: prod  
+    environment: prod
 
     steps:
       - name: Clone GitOps Repo
@@ -82,8 +93,8 @@ jobs:
       - name: Update Prod Values
         run: |
           cd End-2-end-gitops
-          echo "Updating values-prod.yaml with tag ${{ github.run_number }}"
-          sed -i "s/tag:.*/tag: \"${{ github.run_number }}\"/" values-prod.yaml
+          echo "Deploying image tag ${{ github.event.inputs.image_tag }}"
+          sed -i "s/tag:.*/tag: \"${{ github.event.inputs.image_tag }}\"/" values-prod.yaml
 
       - name: Push changes
         run: |
@@ -91,5 +102,5 @@ jobs:
           git config user.name "sagarbindu"
           git config user.email "dashsagarbindu789@gmail.com"
           git add .
-          git commit -m "Prod: update image tag to ${{ github.run_number }}"
+          git commit -m "Prod: deploy image ${{ github.event.inputs.image_tag }}"
           git push https://${{ secrets.GIT_TOKEN }}@github.com/sagarbindu/End-2-end-gitops.git

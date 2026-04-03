@@ -52,19 +52,35 @@ jobs:
       - name: AI Failure Analyzer (Gemini)
         if: failure()
         run: |
-          LOGS=$(tail -n 50 pipeline.log)
+          echo "Analyzing pipeline failure with Gemini..."
 
-          curl -s \
+          LOGS=$(tail -n 50 pipeline.log || echo "No logs found")
+
+          # 🔥 Escape logs properly
+          SAFE_LOGS=$(echo "$LOGS" | jq -Rs .)
+
+          RESPONSE=$(curl -s \
             -H "Content-Type: application/json" \
             -X POST \
             "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
             -d "{
               \"contents\": [{
                 \"parts\": [{
-                  \"text\": \"Analyze this CI/CD failure and suggest fix:\n\n$LOGS\"
+                  \"text\": $SAFE_LOGS
                 }]
               }]
-            }"
+            }")
+
+          echo "====== FULL GEMINI RESPONSE ======"
+          echo "$RESPONSE"
+
+          AI_OUTPUT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // "No AI response received"')
+
+          echo "========== AI SUGGESTION =========="
+          echo "$AI_OUTPUT"
+
+          echo "### AI Failure Analysis (Gemini)" >> $GITHUB_STEP_SUMMARY
+          echo "$AI_OUTPUT" >> $GITHUB_STEP_SUMMARY
 
   # 🚀 DEV Deployment
   update-dev:

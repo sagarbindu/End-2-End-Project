@@ -57,6 +57,9 @@ jobs:
 
           LOGS=$(tail -n 100 pipeline.log || echo "No logs found")
 
+          # Escape logs properly
+          SAFE_LOGS=$(echo "$LOGS" | jq -Rs .)
+
           RESPONSE=$(curl https://api.openai.com/v1/chat/completions \
             -s \
             -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
@@ -66,23 +69,25 @@ jobs:
               \"messages\": [
                 {
                   \"role\": \"system\",
-                  \"content\": \"You are a DevOps expert. Analyze CI/CD failures, classify error type (Docker, Git, Network, Dependency, Permission), and suggest a fix clearly.\"
+                  \"content\": \"You are a DevOps expert. Analyze CI/CD failures and suggest fixes.\"
                 },
                 {
                   \"role\": \"user\",
-                  \"content\": \"Here are pipeline logs:\n\n$LOGS\"
+                  \"content\": $SAFE_LOGS
                 }
               ]
             }")
 
-          AI_OUTPUT=$(echo $RESPONSE | jq -r '.choices[0].message.content')
+          echo "====== FULL API RESPONSE ======"
+          echo "$RESPONSE"
+
+          AI_OUTPUT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No AI response received"')
 
           echo "========== AI SUGGESTION =========="
           echo "$AI_OUTPUT"
 
           echo "### AI Failure Analysis" >> $GITHUB_STEP_SUMMARY
           echo "$AI_OUTPUT" >> $GITHUB_STEP_SUMMARY
-
 
   # 🚀 DEV Deployment
   update-dev:

@@ -33,17 +33,20 @@ jobs:
       # 🔥 Build + capture logs
       - name: Build Docker Image
         run: |
+          set -o pipefail
           docker build -t sagar456/devops-app:${{ github.sha }} . 2>&1 | tee -a pipeline.log
           docker tag sagar456/devops-app:${{ github.sha }} sagar456/devops-app:latest 2>&1 | tee -a pipeline.log
 
       # 🔥 Push + capture logs
       - name: Push Docker Image
         run: |
+          set -o pipefail
           docker push sagar456/devops-app:${{ github.sha }} 2>&1 | tee -a pipeline.log
           docker push sagar456/devops-app:latest 2>&1 | tee -a pipeline.log
 
       - name: Trigger Render Deployment
         run: |
+          set -o pipefail
           curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }} 2>&1 | tee -a pipeline.log
 
       # 🤖 AI Failure Analyzer (GENERIC)

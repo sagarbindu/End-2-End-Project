@@ -7,174 +7,92 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Enter image tag to deploy (SHA)"
+        description: "Enter image tag to deploy (only for PROD)"
         required: false
 
 jobs:
 
   # 🏗 Build + Push Docker Image
   build-and-push:
+    name: Build and Push Image
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'dev')
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
+      # 🔐 Docker Login
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 🔥 Build + capture logs
+      # 🏗 Build Image
       - name: Build Docker Image
         run: |
-          set -o pipefail
-          docker build -t sagar456/devops-app:${{ github.sha }} . 2>&1 | tee -a pipeline.log
-          docker tag sagar456/devops-app:${{ github.sha }} sagar456/devops-app:latest 2>&1 | tee -a pipeline.log
+          docker build -t sagar456/devops-app:${{ github.sha }} .
+          docker tag sagar456/devops-app:${{ github.sha }} sagar456/devops-app:latest
 
-      # 🔥 Push + capture logs
+      # 📦 Push Image
       - name: Push Docker Image
         run: |
-          set -o pipefail
-          docker push sagar456/devops-app:${{ github.sha }} 2>&1 | tee -a pipeline.log
-          docker push sagar456/devops-app:latest 2>&1 | tee -a pipeline.log
+          docker push sagar456/devops-app:${{ github.sha }}
+          docker push sagar456/devops-app:latest
 
+      # 🚀 Trigger Render Deployment
       - name: Trigger Render Deployment
         run: |
-          set -o pipefail
-          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }} 2>&1 | tee -a pipeline.log
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
 
-      - name: AI Failure Analyzer (Gemini)
-        if: failure()
-        run: |
-          echo "Analyzing pipeline failure with Gemini..."
-
-          LOGS=$(tail -n 50 pipeline.log || echo "No logs found")
-
-          # 🔥 Create proper prompt
-          PROMPT="Analyze this CI/CD failure, identify root cause and suggest fix:\n\n$LOGS"
-
-          # 🔥 Escape entire prompt safely
-          SAFE_PROMPT=$(echo "$PROMPT" | jq -Rs .)
-
-          RESPONSE=$(curl -s \
-            -H "Content-Type: application/json" \
-            -X POST \
-            "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
-            -d "{
-              \"contents\": [{
-                \"parts\": [{
-                  \"text\": $SAFE_PROMPT
-                }]
-              }]
-            }")
-
-          echo "====== FULL GEMINI RESPONSE ======"
-          echo "$RESPONSE"
-
-          AI_OUTPUT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // "No AI response received"')
-
-          echo "========== AI SUGGESTION =========="
-          echo "$AI_OUTPUT"
-
-          echo "### AI Failure Analysis (Gemini)" >> $GITHUB_STEP_SUMMARY
-          echo "$AI_OUTPUT" >> $GITHUB_STEP_SUMMARY
-
-  # 🚀 DEV Deployment
+  # 🚀 DEV Deployment (Auto)
   update-dev:
+    name: Update Dev Helm
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: startsWith(github.ref_name, 'dev')
+    if: github.ref_name == 'dev'
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
       - name: Clone GitOps Repo
-        run: git clone https://github.com/sagarbindu/End-2-end-gitops.git 2>&1 | tee -a pipeline.log
+        run: git clone https://github.com/sagarbindu/End-2-end-gitops.git
 
       - name: Update Dev Values
         run: |
           cd End-2-end-gitops
-
-          FILE=values-dev.yaml
-
-          OLD_TAG=$(grep 'tag:' $FILE | head -1 | awk '{print $2}' | tr -d '"')
-
-          echo "Old tag: $OLD_TAG"
-
-          # update previousTag
-          if grep -q "previousTag" $FILE; then
-            sed -i "s/previousTag:.*/previousTag: \"$OLD_TAG\"/" $FILE
-          else
-            echo "previousTag: \"$OLD_TAG\"" >> $FILE
-          fi
-
-          # update new tag
-          sed -i "s/tag:.*/tag: \"${{ github.sha }}\"/" $FILE
+          sed -i "s/tag:.*/tag: \"${{ github.sha }}\"/" values-dev.yaml
 
       - name: Push changes
         run: |
           cd End-2-end-gitops
-
           git config user.name "sagarbindu"
           git config user.email "dashsagarbindu789@gmail.com"
-
           git add .
           git commit -m "Dev: update image tag to ${{ github.sha }}" || echo "No changes"
           git push https://${{ secrets.GIT_TOKEN }}@github.com/sagarbindu/End-2-end-gitops.git
 
-
-  # 🔒 PROD Deployment
+  # 🔒 PROD Deployment (Manual + Controlled)
   update-prod:
+    name: Update Prod Helm
     runs-on: ubuntu-latest
+    needs: build-and-push
     if: github.ref_name == 'main' && github.event_name == 'workflow_dispatch'
 
     environment: prod
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
       - name: Clone GitOps Repo
-        run: git clone https://github.com/sagarbindu/End-2-end-gitops.git 2>&1 | tee -a pipeline.log
+        run: git clone https://github.com/sagarbindu/End-2-end-gitops.git
 
       - name: Update Prod Values
         run: |
           cd End-2-end-gitops
-
-          FILE=values-prod.yaml
-          TAG="${{ github.event.inputs.image_tag }}"
-
-          if [ -z "$TAG" ]; then
-            echo "Image tag required!"
-            exit 1
-          fi
-
-          OLD_TAG=$(grep 'tag:' $FILE | head -1 | awk '{print $2}' | tr -d '"')
-
-          # update previousTag
-          if grep -q "previousTag" $FILE; then
-            sed -i "s/previousTag:.*/previousTag: \"$OLD_TAG\"/" $FILE
-          else
-            echo "previousTag: \"$OLD_TAG\"" >> $FILE
-          fi
-
-          # update new tag
-          sed -i "s/tag:.*/tag: \"$TAG\"/" $FILE
+          sed -i "s/tag:.*/tag: \"${{ github.event.inputs.image_tag }}\"/" values-prod.yaml
 
       - name: Push changes
         run: |
           cd End-2-end-gitops
-
           git config user.name "sagarbindu"
           git config user.email "dashsagarbindu789@gmail.com"
-
           git add .
           git commit -m "Prod: deploy image ${{ github.event.inputs.image_tag }}"
           git push https://${{ secrets.GIT_TOKEN }}@github.com/sagarbindu/End-2-end-gitops.git

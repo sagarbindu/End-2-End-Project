@@ -56,17 +56,17 @@ jobs:
 
           LOGS=$(tail -n 50 pipeline.log || echo "No logs found")
 
-          # 🔥 Escape logs properly
+          # Escape logs properly
           SAFE_LOGS=$(echo "$LOGS" | jq -Rs .)
 
           RESPONSE=$(curl -s \
             -H "Content-Type: application/json" \
             -X POST \
-            "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+            "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
             -d "{
               \"contents\": [{
                 \"parts\": [{
-                  \"text\": $SAFE_LOGS
+                  \"text\": \"Analyze this CI/CD failure, identify root cause and suggest fix:\n\n\" + $SAFE_LOGS
                 }]
               }]
             }")

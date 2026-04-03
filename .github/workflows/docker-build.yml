@@ -56,8 +56,11 @@ jobs:
 
           LOGS=$(tail -n 50 pipeline.log || echo "No logs found")
 
-          # Escape logs properly
-          SAFE_LOGS=$(echo "$LOGS" | jq -Rs .)
+          # 🔥 Create proper prompt
+          PROMPT="Analyze this CI/CD failure, identify root cause and suggest fix:\n\n$LOGS"
+
+          # 🔥 Escape entire prompt safely
+          SAFE_PROMPT=$(echo "$PROMPT" | jq -Rs .)
 
           RESPONSE=$(curl -s \
             -H "Content-Type: application/json" \
@@ -66,7 +69,7 @@ jobs:
             -d "{
               \"contents\": [{
                 \"parts\": [{
-                  \"text\": \"Analyze this CI/CD failure, identify root cause and suggest fix:\n\n\" + $SAFE_LOGS
+                  \"text\": $SAFE_PROMPT
                 }]
               }]
             }")

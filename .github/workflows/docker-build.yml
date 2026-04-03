@@ -49,45 +49,22 @@ jobs:
           set -o pipefail
           curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }} 2>&1 | tee -a pipeline.log
 
-      # 🤖 AI Failure Analyzer (GENERIC)
-      - name: AI Failure Analyzer
+      - name: AI Failure Analyzer (Gemini)
         if: failure()
         run: |
-          echo "Analyzing pipeline failure..."
+          LOGS=$(tail -n 50 pipeline.log)
 
-          LOGS=$(tail -n 100 pipeline.log || echo "No logs found")
-
-          # Escape logs properly
-          SAFE_LOGS=$(echo "$LOGS" | jq -Rs .)
-
-          RESPONSE=$(curl https://api.openai.com/v1/chat/completions \
-            -s \
-            -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
-            -H "Content-type: application/json" \
+          curl -s \
+            -H "Content-Type: application/json" \
+            -X POST \
+            "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
             -d "{
-              \"model\": \"gpt-4o-mini\",
-              \"messages\": [
-                {
-                  \"role\": \"system\",
-                  \"content\": \"You are a DevOps expert. Analyze CI/CD failures and suggest fixes.\"
-                },
-                {
-                  \"role\": \"user\",
-                  \"content\": $SAFE_LOGS
-                }
-              ]
-            }")
-
-          echo "====== FULL API RESPONSE ======"
-          echo "$RESPONSE"
-
-          AI_OUTPUT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No AI response received"')
-
-          echo "========== AI SUGGESTION =========="
-          echo "$AI_OUTPUT"
-
-          echo "### AI Failure Analysis" >> $GITHUB_STEP_SUMMARY
-          echo "$AI_OUTPUT" >> $GITHUB_STEP_SUMMARY
+              \"contents\": [{
+                \"parts\": [{
+                  \"text\": \"Analyze this CI/CD failure and suggest fix:\n\n$LOGS\"
+                }]
+              }]
+            }"
 
   # 🚀 DEV Deployment
   update-dev:

@@ -12,7 +12,7 @@ on:
 
 jobs:
 
-  # 🏗 Build + Push Docker Image
+  # 🏗 Build + Push Docker Image ######
   build-and-push:
     name: Build and Push Image
     runs-on: ubuntu-latest
